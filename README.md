@@ -48,7 +48,11 @@ pnpm run dev:firefox
 ```bash
 pnpm run build
 pnpm run build:firefox
+pnpm run zip
+pnpm run zip:firefox
 ```
+
+Firefox packaging now produces `.output/*-firefox.xpi` for installation and release upload.
 
 ## Docker Chromium Preview
 
@@ -82,6 +86,7 @@ To stop the container:
 - The options page supports either pasting a token directly or logging in with username/password.
 - The popup only inspects the address bar hostname in the first version. It does not trace every third-party resource on the page.
 - Browsers still need to trust the Router TLS certificate if you use HTTPS with a self-signed cert.
+- Firefox stable usually requires a signed `.xpi` for permanent installation. Use Firefox Developer Edition/Nightly for temporary unsigned installs, or distribute the signed release asset.
 
 ## License
 
