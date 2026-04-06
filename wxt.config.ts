@@ -7,7 +7,7 @@ export default defineConfig({
     name: 'Landscape 追踪',
     description:
       'Trace how Landscape handles the current website and resource domains.',
-    permissions: ['storage', 'tabs'],
+    permissions: ['storage', 'tabs', 'webRequest'],
     host_permissions: ['http://*/*', 'https://*/*'],
     ...(browser === 'firefox'
       ? {

@@ -117,6 +117,12 @@ export interface BulkInspectionResult {
   inspection?: SiteInspection;
 }
 
+export interface CacheInconsistencySummary {
+  cachedVerdictCount: number;
+  inconsistentIps: string[];
+  inconsistentVerdictCount: number;
+}
+
 interface PreparedInspectionContext {
   client: CallerIdentityResponse;
   dnsRedirectCache: Map<string, Promise<DnsRedirectDetail | null>>;
@@ -366,6 +372,23 @@ function summarizeNoVerdict(
   }
 
   return summarizeVerdicts([], flow);
+}
+
+export function getCacheInconsistencySummary(
+  inspection: SiteInspection,
+): CacheInconsistencySummary | null {
+  const cachedVerdicts = inspection.verdicts.filter((verdict) => verdict.hasCache);
+  const inconsistentVerdicts = cachedVerdicts.filter((verdict) => !verdict.cacheConsistent);
+
+  if (inconsistentVerdicts.length === 0) {
+    return null;
+  }
+
+  return {
+    cachedVerdictCount: cachedVerdicts.length,
+    inconsistentIps: inconsistentVerdicts.map((verdict) => verdict.dstIp),
+    inconsistentVerdictCount: inconsistentVerdicts.length,
+  };
 }
 
 function getCachedFlowDetail(

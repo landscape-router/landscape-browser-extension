@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import browser from 'webextension-polyfill';
 import {
   NAlert,
@@ -18,6 +18,11 @@ import {
   zhCN,
 } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
+import {
+  GET_MAIN_FRAME_IP,
+  getMainFrameIpStorageKey,
+  type MainFrameIpResponse,
+} from '../../lib/background-messages';
 import type { CurrentSite } from '../../lib/current-site';
 import { getCurrentSite } from '../../lib/current-site';
 import { formatChipClass } from '../../lib/format';
@@ -40,6 +45,7 @@ const { t, locale } = useI18n();
 
 const config = ref<RouterConfig | null>(null);
 const site = ref<CurrentSite | null>(null);
+const mainRequestIp = ref<string | null>(null);
 const inspection = ref<SiteInspection | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -48,6 +54,8 @@ const resourceDomains = ref<ResourceDomainSummary[]>([]);
 const resourceInspectionMap = ref<Record<string, ResourceInspectionState>>({});
 const bulkInspecting = ref(false);
 const mainExpanded = ref(false);
+const currentMainFrameIpKey = ref<string | null>(null);
+let ipRetryTimer: ReturnType<typeof setTimeout> | null = null;
 const languageOptions = [
   { label: 'English', value: 'en' },
   { label: '中文', value: 'zh' },
@@ -56,24 +64,99 @@ const languageOptions = [
 const naiveLocale = computed(() => (locale.value === 'zh' ? zhCN : enUS));
 const naiveDateLocale = computed(() => (locale.value === 'zh' ? dateZhCN : dateEnUS));
 
+function resolveMainRequestIp(value: MainFrameIpResponse, expectedHostname: string): string | null {
+  if (!value.ip || !value.url) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value.url);
+    return url.hostname === expectedHostname ? value.ip : null;
+  } catch {
+    return null;
+  }
+}
+
+async function updateMainRequestIp(tabId: number, expectedHostname: string) {
+  const response = (await browser.runtime.sendMessage({
+    tabId,
+    type: GET_MAIN_FRAME_IP,
+  })) as MainFrameIpResponse;
+
+  const ip = resolveMainRequestIp(response, expectedHostname);
+  mainRequestIp.value = ip;
+  return ip;
+}
+
+function clearIpRetryTimer() {
+  if (ipRetryTimer) {
+    clearTimeout(ipRetryTimer);
+    ipRetryTimer = null;
+  }
+}
+
+function scheduleMainRequestIpRetry(tabId: number, expectedHostname: string, attemptsLeft = 8) {
+  clearIpRetryTimer();
+
+  if (attemptsLeft <= 0) {
+    return;
+  }
+
+  ipRetryTimer = setTimeout(async () => {
+    const ip = await updateMainRequestIp(tabId, expectedHostname).catch(() => null);
+    if (!ip && site.value?.tabId === tabId) {
+      scheduleMainRequestIpRetry(tabId, expectedHostname, attemptsLeft - 1);
+    }
+  }, 400);
+}
+
+const handleStorageChange = (
+  changes: Record<string, browser.Storage.StorageChange>,
+  areaName: string,
+) => {
+  if (areaName !== 'local' || !currentMainFrameIpKey.value) {
+    return;
+  }
+
+  const changed = changes[currentMainFrameIpKey.value];
+  if (!changed) {
+    return;
+  }
+
+  const nextValue = changed.newValue as MainFrameIpResponse | undefined;
+  mainRequestIp.value = site.value ? resolveMainRequestIp(nextValue ?? {}, site.value.hostname) : null;
+};
+
 async function load() {
   loading.value = true;
   error.value = null;
   resourceError.value = null;
   inspection.value = null;
+  mainRequestIp.value = null;
+  currentMainFrameIpKey.value = null;
   resourceDomains.value = [];
   resourceInspectionMap.value = {};
   mainExpanded.value = false;
+  clearIpRetryTimer();
 
   try {
     const [savedConfig, currentSite] = await Promise.all([getRouterConfig(), getCurrentSite()]);
     config.value = savedConfig;
     site.value = currentSite;
+    currentMainFrameIpKey.value = getMainFrameIpStorageKey(currentSite.tabId);
 
-    const [resourceDomainsResult, inspectionResult] = await Promise.allSettled([
+    const [resourceDomainsResult, inspectionResult, mainIpResult] = await Promise.allSettled([
       getResourceDomainsForTab(currentSite.tabId),
       savedConfig ? inspectCurrentSite(currentSite, savedConfig) : Promise.resolve(null),
+      updateMainRequestIp(currentSite.tabId, currentSite.hostname),
     ]);
+
+    if (mainIpResult.status === 'fulfilled') {
+      mainRequestIp.value = mainIpResult.value;
+      if (!mainIpResult.value) {
+        scheduleMainRequestIpRetry(currentSite.tabId, currentSite.hostname);
+      }
+    }
 
     if (resourceDomainsResult.status === 'fulfilled') {
       resourceDomains.value = resourceDomainsResult.value;
@@ -195,12 +278,19 @@ async function handleInspectAllResources() {
 }
 
 onMounted(() => {
+  browser.storage.onChanged.addListener(handleStorageChange);
+
   void getStoredLocale().then((storedLocale) => {
     if (storedLocale) {
       locale.value = storedLocale;
     }
   });
   void load();
+});
+
+onBeforeUnmount(() => {
+  clearIpRetryTimer();
+  browser.storage.onChanged.removeListener(handleStorageChange);
 });
 </script>
 
@@ -248,12 +338,16 @@ onMounted(() => {
         <div class="domain-focus-row">
           <div class="domain-focus-label">{{ t('fields.hostname') }}</div>
           <code class="domain-focus-value">{{ site.hostname }}</code>
+          <div class="panel-meta">
+            {{ t('fields.actualIp') }}: <code class="mono">{{ mainRequestIp || t('capturing') }}</code>
+          </div>
         </div>
 
         <InspectionPanels
           v-if="inspection && !loading && mainExpanded"
           class="domain-panel"
           :heading="''"
+          :highlight-ip="mainRequestIp || undefined"
           :inspection="inspection"
         />
       </NCard>

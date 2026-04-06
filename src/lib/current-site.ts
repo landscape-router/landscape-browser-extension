@@ -8,15 +8,19 @@ export interface CurrentSite {
   url: string;
 }
 
-export async function getCurrentSite(): Promise<CurrentSite> {
-  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+export interface BrowserTabLike {
+  id?: number;
+  title?: string;
+  url?: string;
+}
 
+export function currentSiteFromTab(tab: BrowserTabLike): CurrentSite {
   if (!tab?.url) {
-    throw new Error('No active tab URL is available.');
+    throw new Error('No tab URL is available.');
   }
 
   if (tab.id == null) {
-    throw new Error('No active tab id is available.');
+    throw new Error('No tab id is available.');
   }
 
   const url = new URL(tab.url);
@@ -31,4 +35,9 @@ export async function getCurrentSite(): Promise<CurrentSite> {
     title: tab.title,
     url: tab.url,
   };
+}
+
+export async function getCurrentSite(): Promise<CurrentSite> {
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  return currentSiteFromTab(tab);
 }

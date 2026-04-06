@@ -3,10 +3,12 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NAlert, NCard, NFlex, NTag } from 'naive-ui';
 import type { FlowDetail, SiteInspection } from '../lib/router-inspector';
+import { getCacheInconsistencySummary } from '../lib/router-inspector';
 import { formatChipClass, formatTimestamp } from '../lib/format';
 
 const props = defineProps<{
   heading?: string;
+  highlightIp?: string;
   inspection: SiteInspection;
 }>();
 
@@ -83,6 +85,45 @@ const flowHighlights = computed(() => {
   return items.filter((item): item is FlowHighlight => item !== null);
 });
 
+const cacheWarning = computed(() => getCacheInconsistencySummary(props.inspection));
+
+type LookupRecord = SiteInspection['dnsLookups'][number]['records'][number];
+type VerdictRecord = SiteInspection['verdicts'][number];
+
+function isHighlightedRecord(record: LookupRecord) {
+  return !!props.highlightIp && record.data.trim() === props.highlightIp;
+}
+
+function sortRecords(records: LookupRecord[]): LookupRecord[] {
+  return [...records].sort((left, right) => {
+    const leftHighlighted = isHighlightedRecord(left);
+    const rightHighlighted = isHighlightedRecord(right);
+
+    if (leftHighlighted !== rightHighlighted) {
+      return leftHighlighted ? -1 : 1;
+    }
+
+    return left.data.localeCompare(right.data);
+  });
+}
+
+function isHighlightedVerdict(verdict: VerdictRecord) {
+  return !!props.highlightIp && verdict.dstIp.trim() === props.highlightIp;
+}
+
+const sortedVerdicts = computed(() => {
+  return [...props.inspection.verdicts].sort((left, right) => {
+    const leftHighlighted = isHighlightedVerdict(left);
+    const rightHighlighted = isHighlightedVerdict(right);
+
+    if (leftHighlighted !== rightHighlighted) {
+      return leftHighlighted ? -1 : 1;
+    }
+
+    return left.dstIp.localeCompare(right.dstIp);
+  });
+});
+
 function boolTone(value: boolean) {
   return value ? 'success' : 'default';
 }
@@ -108,6 +149,9 @@ function boolTone(value: boolean) {
         <span class="highlight-meta">{{ item.meta }}</span>
       </div>
     </NFlex>
+    <NAlert v-if="cacheWarning" type="warning" :show-icon="false" style="margin-bottom: 10px;">
+      {{ t('cacheMismatchWarning', { count: cacheWarning.inconsistentVerdictCount }) }}
+    </NAlert>
     <div class="panel-meta">{{ t('inspectedAt', { time: formatTimestamp(inspection.inspectedAt) }) }}</div>
   </NCard>
 
@@ -149,14 +193,34 @@ function boolTone(value: boolean) {
           <div class="panel-meta mono">{{ lookup.redirectDetail.sourceSummary }}</div>
         </div>
 
-        <div class="panel-meta">
-          {{ t('records') }}:
-          {{ lookup.records.length > 0 ? lookup.records.map((record) => `${record.rr_type}:${record.data}`).join(', ') : t('none') }}
+        <div class="panel-meta">{{ t('records') }}:</div>
+        <div v-if="lookup.records.length > 0" class="record-grid">
+          <div
+            v-for="record in sortRecords(lookup.records)"
+            :key="`${lookup.recordType}-record-${record.rr_type}-${record.data}`"
+            class="record-card"
+            :class="{ 'record-card-active': isHighlightedRecord(record) }"
+          >
+            <span class="record-card-type">{{ record.rr_type }}</span>
+            <code class="record-card-value">{{ record.data }}</code>
+          </div>
         </div>
-        <div v-if="lookup.cacheRecords.length > 0" class="panel-meta">
-          {{ t('cache') }}:
-          {{ lookup.cacheRecords.map((record) => `${record.rr_type}:${record.data}`).join(', ') }}
-        </div>
+        <div v-else class="panel-meta">{{ t('none') }}</div>
+
+        <template v-if="lookup.cacheRecords.length > 0">
+          <div class="panel-meta">{{ t('cache') }}:</div>
+          <div class="record-grid">
+            <div
+              v-for="record in sortRecords(lookup.cacheRecords)"
+              :key="`${lookup.recordType}-cache-${record.rr_type}-${record.data}`"
+              class="record-card"
+              :class="{ 'record-card-active': isHighlightedRecord(record) }"
+            >
+              <span class="record-card-type">{{ record.rr_type }}</span>
+              <code class="record-card-value">{{ record.data }}</code>
+            </div>
+          </div>
+        </template>
         <div v-if="lookup.dynamicRedirectSource" class="panel-meta mono">
           {{ t('fields.dynamicRedirect') }}: {{ lookup.dynamicRedirectSource }}
         </div>
@@ -175,7 +239,13 @@ function boolTone(value: boolean) {
     </div>
 
     <NFlex v-else vertical :size="10">
-      <NCard v-for="verdict in inspection.verdicts" :key="verdict.dstIp" embedded size="small">
+      <NCard
+        v-for="verdict in sortedVerdicts"
+        :key="verdict.dstIp"
+        embedded
+        size="small"
+        :class="{ 'verdict-card-active': isHighlightedVerdict(verdict) }"
+      >
         <NFlex justify="space-between" align="center">
           <code>{{ verdict.dstIp }}</code>
           <NTag round :class="formatChipClass(verdict.action)">

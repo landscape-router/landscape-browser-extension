@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 
-const ROUTER_CONFIG_KEY = 'router-config';
+export const ROUTER_CONFIG_KEY = 'router-config';
 export const DEFAULT_ROUTER_BASE_URL = 'https://landscape.local:6443';
 
 export interface RouterConfig {

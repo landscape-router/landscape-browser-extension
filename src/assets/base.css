@@ -399,6 +399,47 @@ a {
   margin-top: 8px;
 }
 
+.record-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.record-card {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+  padding: 7px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.record-card-active {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.16);
+}
+
+.verdict-card-active {
+  border-color: rgba(52, 211, 153, 0.35) !important;
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+.record-card-type {
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.record-card-value {
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.25;
+  word-break: break-all;
+}
+
 .form {
   display: flex;
   flex-direction: column;

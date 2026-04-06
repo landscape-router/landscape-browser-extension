@@ -37,6 +37,9 @@ const messages = {
     inspectingCurrentSite: 'Inspecting current site…',
     noExternalDomains: 'No external resource domains were detected on this page yet.',
     noVerdicts: 'No destination IPs were returned, so there is no verdict trace yet.',
+    cacheMismatchWarning:
+      'Cache mismatch detected for {count} cached destinations. This site may be using stale or inconsistent routing cache entries.',
+    capturing: 'Capturing…',
     lookupFailed: 'Lookup failed',
     inspectedAt: 'Inspected at {time}',
     records: 'Records',
@@ -78,6 +81,7 @@ const messages = {
     configureBeforeInspect: 'Configure the Router first before inspecting resource domains.',
     fields: {
       hostname: 'Hostname',
+      actualIp: 'Actual IP',
       protocol: 'Protocol',
       title: 'Title',
       url: 'URL',
@@ -139,6 +143,8 @@ const messages = {
     inspectingCurrentSite: '正在检查当前站点…',
     noExternalDomains: '当前页面还没有检测到第三方资源域名。',
     noVerdicts: '没有可用的目标 IP，因此暂时无法做分流判定。',
+    cacheMismatchWarning: '检测到 {count} 个已缓存目标存在缓存不一致，当前站点可能命中了过期或不一致的分流缓存。',
+    capturing: '捕获中…',
     lookupFailed: '查询失败',
     inspectedAt: '检查时间：{time}',
     records: '记录',
@@ -178,6 +184,7 @@ const messages = {
     configureBeforeInspect: '请先配置 Router，再检查资源域名。',
     fields: {
       hostname: '主机名',
+      actualIp: '实际访问 IP',
       protocol: '协议',
       title: '标题',
       url: 'URL',
