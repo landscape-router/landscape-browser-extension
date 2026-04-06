@@ -1,0 +1,79 @@
+name: Build Browser Extensions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 25
+          package-manager-cache: false
+
+      - name: Enable pnpm with corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Chrome package
+        run: pnpm run zip
+
+      - name: Build Firefox package
+        run: pnpm run zip:firefox
+
+      - name: Upload Chrome artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: landscape-extension-chrome
+          path: .output/*-chrome.zip
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Upload Firefox artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: landscape-extension-firefox
+          path: .output/*-firefox.zip
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Upload Firefox sources artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: landscape-extension-firefox-sources
+          path: .output/*-sources.zip
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Create GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            .output/*-chrome.zip
+            .output/*-firefox.zip
+            .output/*-sources.zip
+          fail_on_unmatched_files: true
