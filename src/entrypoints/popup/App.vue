@@ -47,7 +47,7 @@ const resourceError = ref<string | null>(null);
 const resourceDomains = ref<ResourceDomainSummary[]>([]);
 const resourceInspectionMap = ref<Record<string, ResourceInspectionState>>({});
 const bulkInspecting = ref(false);
-const mainExpanded = ref(true);
+const mainExpanded = ref(false);
 const languageOptions = [
   { label: 'English', value: 'en' },
   { label: '中文', value: 'zh' },
@@ -63,7 +63,7 @@ async function load() {
   inspection.value = null;
   resourceDomains.value = [];
   resourceInspectionMap.value = {};
-  mainExpanded.value = true;
+  mainExpanded.value = false;
 
   try {
     const [savedConfig, currentSite] = await Promise.all([getRouterConfig(), getCurrentSite()]);
@@ -208,16 +208,19 @@ onMounted(() => {
   <NConfigProvider :theme="darkTheme" :locale="naiveLocale" :date-locale="naiveDateLocale">
     <NGlobalStyle />
     <main class="app-shell popup-shell">
-      <header class="page-title">
-        <div>
-          <h1>{{ t('appTitle') }}</h1>
+      <header class="header-stack">
+        <div class="page-title">
+          <div>
+            <h1>{{ t('appTitle') }}</h1>
+            <div v-if="config" class="router-endpoint mono">{{ config.baseUrl }}</div>
+          </div>
         </div>
-        <NFlex :size="8">
+        <NFlex class="toolbar-row" :size="8" :wrap="false">
           <NSelect
             :value="locale"
             :consistent-menu-width="false"
             size="small"
-            style="min-width: 88px;"
+            style="width: 84px;"
             :options="languageOptions"
             @update:value="handleLocaleChange"
           />
@@ -240,7 +243,6 @@ onMounted(() => {
             >
               {{ mainExpanded ? t('collapse') : t('expand') }}
             </NButton>
-            <span v-if="config" class="panel-meta">{{ config.baseUrl }}</span>
           </NFlex>
         </template>
         <div class="domain-focus-row">

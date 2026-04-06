@@ -65,6 +65,19 @@ a {
   gap: 10px;
 }
 
+.header-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.router-endpoint {
+  color: var(--text-soft);
+  font-size: 12px;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
 .page-title h1,
 .page-title h2,
 .page-title p {
@@ -246,6 +259,10 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.toolbar-row {
+  justify-content: flex-end;
 }
 
 .wrap {
