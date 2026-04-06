@@ -1,0 +1,23 @@
+services:
+  chromium:
+    image: lscr.io/linuxserver/chromium:latest
+    container_name: landscape-router-chromium
+    environment:
+      PUID: ${LANDSCAPE_UID:-1000}
+      PGID: ${LANDSCAPE_GID:-1000}
+      TZ: ${TZ:-Etc/UTC}
+      TITLE: Landscape Router Inspector
+      CHROME_CLI: >-
+        --disable-extensions-except=/workspace/extension
+        --load-extension=/workspace/extension
+        --new-window
+        https://example.com
+    volumes:
+      - ${LANDSCAPE_CHROMIUM_CONFIG_DIR}:/config
+      - ${LANDSCAPE_EXT_DIR}:/workspace/extension:ro
+    extra_hosts:
+      - "landscape.local:host-gateway"
+    ports:
+      - "3001:3001"
+    shm_size: "1gb"
+    restart: unless-stopped
