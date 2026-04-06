@@ -4,6 +4,7 @@ import { getClientCaller } from '@landscape-router/types/api/client/client';
 import { setAxiosInstance } from '@landscape-router/types/mutator';
 import type { CallerIdentityResponse, LoginResult } from '@landscape-router/types/api/schemas';
 import type { RouterConfig } from './router-storage';
+import { saveRouterConfig } from './router-storage';
 
 type RouterErrorLike = {
   error_id?: string;
@@ -17,6 +18,15 @@ function formatAuthToken(token: string): string {
   }
 
   return /^bearer\s/i.test(trimmed) ? trimmed : `Bearer ${trimmed}`;
+}
+
+function extractRefreshToken(headers: Record<string, unknown> | undefined): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+
+  const token = headers['x-refresh-token'];
+  return typeof token === 'string' && token.trim() ? token.trim() : undefined;
 }
 
 function createAxiosInstance(config: { baseUrl: string; token?: string }): AxiosInstance {
@@ -34,10 +44,18 @@ function createAxiosInstance(config: { baseUrl: string; token?: string }): Axios
     return request;
   });
 
-  instance.interceptors.response.use(
-    (response) => response.data,
-    (error: AxiosError<RouterErrorLike>) => Promise.reject(error.response?.data ?? error),
-  );
+  instance.interceptors.response.use(async (response) => {
+    const refreshToken = extractRefreshToken(response.headers as Record<string, unknown> | undefined);
+    if (refreshToken && refreshToken !== config.token) {
+      config.token = refreshToken;
+      await saveRouterConfig({
+        baseUrl: config.baseUrl,
+        token: refreshToken,
+      });
+    }
+
+    return response.data;
+  }, (error: AxiosError<RouterErrorLike>) => Promise.reject(error.response?.data ?? error));
 
   return instance;
 }
@@ -79,7 +97,8 @@ export function getErrorMessage(error: unknown): string {
     error.message.trim()
   ) {
     const value = error as RouterErrorLike;
-    return value.error_id ? `${value.message} (${value.error_id})` : value.message;
+    const message = error.message;
+    return value.error_id ? `${message} (${value.error_id})` : message;
   }
 
   if (axios.isAxiosError(error)) {
