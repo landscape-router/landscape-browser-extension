@@ -96,6 +96,31 @@ a {
   font-weight: 600;
 }
 
+.domain-focus-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.domain-focus-label {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.domain-focus-value {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  background: rgba(96, 165, 250, 0.08);
+  font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
 .panel-meta {
   color: var(--text-soft);
   font-size: 12px;

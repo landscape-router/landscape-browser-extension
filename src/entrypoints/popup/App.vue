@@ -26,7 +26,6 @@ import { getErrorMessage } from '../../lib/router-client';
 import { inspectCurrentSite, inspectHostname, inspectHostnames, type SiteInspection } from '../../lib/router-inspector';
 import type { RouterConfig } from '../../lib/router-storage';
 import { getRouterConfig } from '../../lib/router-storage';
-import FieldGrid from '../../components/FieldGrid.vue';
 import InspectionPanels from '../../components/InspectionPanels.vue';
 import { getStoredLocale, saveStoredLocale, type AppLocale } from '../../lib/i18n';
 
@@ -55,16 +54,6 @@ const languageOptions = [
 
 const naiveLocale = computed(() => (locale.value === 'zh' ? zhCN : enUS));
 const naiveDateLocale = computed(() => (locale.value === 'zh' ? dateZhCN : dateEnUS));
-
-const siteRows = computed(() => {
-  if (!site.value) return [] as Array<[string, string | undefined]>;
-  return [
-    [t('fields.hostname'), site.value.hostname],
-    [t('fields.protocol'), site.value.protocol],
-    [t('fields.title'), site.value.title],
-    [t('fields.url'), site.value.url],
-  ] as Array<[string, string | undefined]>;
-});
 
 const selectedResourceInspection = computed(() => {
   return selectedResourceHostname.value
@@ -235,7 +224,10 @@ onMounted(() => {
         <template #header-extra>
           <span v-if="config" class="panel-meta">{{ config.baseUrl }}</span>
         </template>
-        <FieldGrid :rows="siteRows" />
+        <div class="domain-focus-row">
+          <div class="domain-focus-label">{{ t('fields.hostname') }}</div>
+          <code class="domain-focus-value">{{ site.hostname }}</code>
+        </div>
       </NCard>
 
       <NAlert v-if="!config && !loading" type="info" :show-icon="false">

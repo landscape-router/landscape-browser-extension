@@ -3,8 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { NAlert, NCard, NFlex, NTag } from 'naive-ui';
 import type { FlowDetail, SiteInspection } from '../lib/router-inspector';
-import { formatChipClass, formatFlowHint, formatTimestamp } from '../lib/format';
-import FieldGrid from './FieldGrid.vue';
+import { formatChipClass, formatTimestamp } from '../lib/format';
 
 const props = defineProps<{
   heading?: string;
@@ -20,15 +19,6 @@ interface FlowHighlight {
 }
 
 const { t } = useI18n();
-
-const overviewRows = computed(
-  () =>
-    [
-      [t('fields.clientIp'), props.inspection.client.ip],
-      [t('fields.mac'), props.inspection.client.mac],
-      [t('fields.source'), props.inspection.client.source],
-    ] as Array<[string, string | undefined]>,
-);
 
 function buildFlowHighlight(
   key: string,
@@ -118,9 +108,6 @@ function boolTone(value: boolean) {
         <span class="highlight-meta">{{ item.meta }}</span>
       </div>
     </NFlex>
-
-    <FieldGrid :rows="overviewRows" />
-    <div class="panel-meta">{{ formatFlowHint(inspection.flow) }}</div>
     <div class="panel-meta">{{ t('inspectedAt', { time: formatTimestamp(inspection.inspectedAt) }) }}</div>
   </NCard>
 
@@ -166,9 +153,9 @@ function boolTone(value: boolean) {
           {{ t('records') }}:
           {{ lookup.records.length > 0 ? lookup.records.map((record) => `${record.rr_type}:${record.data}`).join(', ') : t('none') }}
         </div>
-        <div class="panel-meta">
+        <div v-if="lookup.cacheRecords.length > 0" class="panel-meta">
           {{ t('cache') }}:
-          {{ lookup.cacheRecords.length > 0 ? lookup.cacheRecords.map((record) => `${record.rr_type}:${record.data}`).join(', ') : t('none') }}
+          {{ lookup.cacheRecords.map((record) => `${record.rr_type}:${record.data}`).join(', ') }}
         </div>
         <div v-if="lookup.dynamicRedirectSource" class="panel-meta mono">
           {{ t('fields.dynamicRedirect') }}: {{ lookup.dynamicRedirectSource }}
@@ -214,11 +201,6 @@ function boolTone(value: boolean) {
             <span class="highlight-value">{{ verdict.hasCache }}</span>
           </div>
         </NFlex>
-
-        <div class="panel-meta">
-          {{ t('fields.cacheOk') }}: {{ verdict.cacheConsistent }}
-          · {{ t('fields.reusePort') }}: {{ verdict.allowReusePort }}
-        </div>
       </NCard>
     </NFlex>
   </NCard>

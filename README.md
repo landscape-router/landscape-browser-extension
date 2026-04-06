@@ -59,7 +59,7 @@ Firefox packaging now produces `.output/*-firefox.xpi` for installation and rele
 You can preview the Chrome build inside a Dockerized Chromium session:
 
 ```bash
-./scripts/start-docker-chromium.sh
+./scripts/start.sh
 ```
 
 Then open:
@@ -77,8 +77,16 @@ The script mounts `.output/chrome-mv3` into the container and starts Chromium wi
 To stop the container:
 
 ```bash
-./scripts/stop-docker-chromium.sh
+./scripts/stop.sh
 ```
+
+After code changes, rebuild and sync the unpacked extension into the running Docker browser:
+
+```bash
+./scripts/reload.sh
+```
+
+This script rebuilds the extension, syncs the unpacked files, and restarts the Docker Chromium preview so you do not need to reload the extension manually.
 
 ## Notes
 
