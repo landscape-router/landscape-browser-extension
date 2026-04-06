@@ -121,6 +121,10 @@ a {
   word-break: break-all;
 }
 
+.domain-panel {
+  margin-top: 10px;
+}
+
 .panel-meta {
   color: var(--text-soft);
   font-size: 12px;

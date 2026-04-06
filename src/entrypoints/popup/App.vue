@@ -30,6 +30,7 @@ import InspectionPanels from '../../components/InspectionPanels.vue';
 import { getStoredLocale, saveStoredLocale, type AppLocale } from '../../lib/i18n';
 
 interface ResourceInspectionState {
+  expanded?: boolean;
   error?: string;
   inspection?: SiteInspection;
   loading?: boolean;
@@ -45,8 +46,8 @@ const error = ref<string | null>(null);
 const resourceError = ref<string | null>(null);
 const resourceDomains = ref<ResourceDomainSummary[]>([]);
 const resourceInspectionMap = ref<Record<string, ResourceInspectionState>>({});
-const selectedResourceHostname = ref<string | null>(null);
 const bulkInspecting = ref(false);
+const mainExpanded = ref(true);
 const languageOptions = [
   { label: 'English', value: 'en' },
   { label: '中文', value: 'zh' },
@@ -55,12 +56,6 @@ const languageOptions = [
 const naiveLocale = computed(() => (locale.value === 'zh' ? zhCN : enUS));
 const naiveDateLocale = computed(() => (locale.value === 'zh' ? dateZhCN : dateEnUS));
 
-const selectedResourceInspection = computed(() => {
-  return selectedResourceHostname.value
-    ? resourceInspectionMap.value[selectedResourceHostname.value]?.inspection ?? null
-    : null;
-});
-
 async function load() {
   loading.value = true;
   error.value = null;
@@ -68,7 +63,7 @@ async function load() {
   inspection.value = null;
   resourceDomains.value = [];
   resourceInspectionMap.value = {};
-  selectedResourceHostname.value = null;
+  mainExpanded.value = true;
 
   try {
     const [savedConfig, currentSite] = await Promise.all([getRouterConfig(), getCurrentSite()]);
@@ -120,12 +115,12 @@ async function handleInspectResource(hostname: string) {
     return;
   }
 
-  selectedResourceHostname.value = hostname;
   resourceInspectionMap.value = {
     ...resourceInspectionMap.value,
     [hostname]: {
       ...resourceInspectionMap.value[hostname],
       error: undefined,
+      expanded: true,
       loading: true,
     },
   };
@@ -134,14 +129,29 @@ async function handleInspectResource(hostname: string) {
     const result = await inspectHostname(hostname, config.value);
     resourceInspectionMap.value = {
       ...resourceInspectionMap.value,
-      [hostname]: { inspection: result, loading: false },
+      [hostname]: { expanded: true, inspection: result, loading: false },
     };
   } catch (inspectError) {
     resourceInspectionMap.value = {
       ...resourceInspectionMap.value,
-      [hostname]: { error: getErrorMessage(inspectError), loading: false },
+      [hostname]: { error: getErrorMessage(inspectError), expanded: true, loading: false },
     };
   }
+}
+
+function toggleResource(hostname: string) {
+  const current = resourceInspectionMap.value[hostname];
+  if (!current?.inspection && !current?.error) {
+    return;
+  }
+
+  resourceInspectionMap.value = {
+    ...resourceInspectionMap.value,
+    [hostname]: {
+      ...current,
+      expanded: !current.expanded,
+    },
+  };
 }
 
 async function handleInspectAllResources() {
@@ -170,17 +180,13 @@ async function handleInspectAllResources() {
     const next = { ...resourceInspectionMap.value };
     for (const result of results) {
       next[result.hostname] = {
+        expanded: next[result.hostname]?.expanded ?? false,
         error: result.error,
         inspection: result.inspection,
         loading: false,
       };
     }
     resourceInspectionMap.value = next;
-
-    const firstInspectable = results.find((result) => result.inspection)?.hostname;
-    if (firstInspectable && !selectedResourceHostname.value) {
-      selectedResourceHostname.value = firstInspectable;
-    }
   } catch (inspectError) {
     error.value = getErrorMessage(inspectError);
   } finally {
@@ -222,12 +228,32 @@ onMounted(() => {
 
       <NCard v-if="site" size="small" :title="t('site')">
         <template #header-extra>
-          <span v-if="config" class="panel-meta">{{ config.baseUrl }}</span>
+          <NFlex :size="8" align="center">
+            <NTag v-if="inspection" round :class="formatChipClass(inspection.summary.action)">
+              {{ inspection.summary.label }}
+            </NTag>
+            <NButton
+              v-if="inspection"
+              tertiary
+              size="small"
+              @click="mainExpanded = !mainExpanded"
+            >
+              {{ mainExpanded ? t('collapse') : t('expand') }}
+            </NButton>
+            <span v-if="config" class="panel-meta">{{ config.baseUrl }}</span>
+          </NFlex>
         </template>
         <div class="domain-focus-row">
           <div class="domain-focus-label">{{ t('fields.hostname') }}</div>
           <code class="domain-focus-value">{{ site.hostname }}</code>
         </div>
+
+        <InspectionPanels
+          v-if="inspection && !loading && mainExpanded"
+          class="domain-panel"
+          :heading="''"
+          :inspection="inspection"
+        />
       </NCard>
 
       <NAlert v-if="!config && !loading" type="info" :show-icon="false">
@@ -245,12 +271,6 @@ onMounted(() => {
       <NText v-else-if="config && !inspection" depth="3" style="display: block;">
         {{ t('noResultYet') }}
       </NText>
-
-      <InspectionPanels
-        v-if="inspection && !loading"
-        :heading="''"
-        :inspection="inspection"
-      />
 
       <NCard size="small" :title="t('externalResourceDomains')">
         <template #header-extra>
@@ -309,12 +329,28 @@ onMounted(() => {
                   v-if="resourceInspectionMap[domain.hostname]?.inspection"
                   secondary
                   size="small"
-                  @click="selectedResourceHostname = domain.hostname"
+                  @click="toggleResource(domain.hostname)"
                 >
-                  {{ t('view') }}
+                  {{ resourceInspectionMap[domain.hostname]?.expanded ? t('collapse') : t('expand') }}
                 </NButton>
               </NFlex>
             </NFlex>
+
+            <InspectionPanels
+              v-if="resourceInspectionMap[domain.hostname]?.inspection && resourceInspectionMap[domain.hostname]?.expanded"
+              class="domain-panel"
+              :heading="''"
+              :inspection="resourceInspectionMap[domain.hostname].inspection!"
+            />
+
+            <NAlert
+              v-if="resourceInspectionMap[domain.hostname]?.error && resourceInspectionMap[domain.hostname]?.expanded"
+              type="error"
+              :show-icon="false"
+              style="margin-top: 10px;"
+            >
+              {{ resourceInspectionMap[domain.hostname].error }}
+            </NAlert>
           </NCard>
         </NFlex>
       </NCard>
@@ -323,11 +359,6 @@ onMounted(() => {
         {{ error }}
       </NAlert>
 
-      <InspectionPanels
-        v-if="selectedResourceInspection && !loading"
-        :heading="t('selectedResourceDomain')"
-        :inspection="selectedResourceInspection"
-      />
     </main>
   </NConfigProvider>
 </template>
