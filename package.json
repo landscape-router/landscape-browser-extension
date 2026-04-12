@@ -1,6 +1,6 @@
 {
   "name": "landscape-browser-extension",
-  "version": "0.1.0",
+  "version": "0.18.2-202604120036",
   "private": true,
   "license": "MIT",
   "packageManager": "pnpm@10.33.0",
@@ -15,7 +15,7 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "@landscape-router/types": "^0.17.5",
+    "@landscape-router/types": "^0.18.2",
     "axios": "^1.13.2",
     "naive-ui": "^2.40.3",
     "vue": "^3.5.13",

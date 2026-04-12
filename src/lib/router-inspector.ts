@@ -472,11 +472,13 @@ async function inspectTargetWithContext(
 ): Promise<SiteInspection> {
   const [aLookup, aaaaLookup] = await Promise.allSettled([
     checkDomain({
+      apply_filter: true,
       domain: target.hostname,
       flow_id: context.flow.effective_flow_id,
       record_type: LandscapeDnsRecordType.A,
     }),
     checkDomain({
+      apply_filter: true,
       domain: target.hostname,
       flow_id: context.flow.effective_flow_id,
       record_type: LandscapeDnsRecordType.AAAA,

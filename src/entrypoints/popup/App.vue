@@ -33,6 +33,7 @@ import type { RouterConfig } from '../../lib/router-storage';
 import { getRouterConfig } from '../../lib/router-storage';
 import InspectionPanels from '../../components/InspectionPanels.vue';
 import { getStoredLocale, saveStoredLocale, type AppLocale } from '../../lib/i18n';
+import { APP_VERSION } from '../../lib/app-meta';
 
 interface ResourceInspectionState {
   expanded?: boolean;
@@ -302,6 +303,7 @@ onBeforeUnmount(() => {
         <div class="page-title">
           <div>
             <h1>{{ t('appTitle') }}</h1>
+            <div class="version-line mono">v{{ APP_VERSION }}</div>
             <div v-if="config" class="router-endpoint mono">{{ config.baseUrl }}</div>
           </div>
         </div>

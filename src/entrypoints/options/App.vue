@@ -25,6 +25,7 @@ import { getErrorMessage, loginWithPassword, validateRouterConfig } from '../../
 import { clearRouterConfig, DEFAULT_ROUTER_BASE_URL, getRouterConfig, normalizeBaseUrl, saveRouterConfig } from '../../lib/router-storage';
 import FieldGrid from '../../components/FieldGrid.vue';
 import { getStoredLocale, saveStoredLocale, type AppLocale } from '../../lib/i18n';
+import { APP_VERSION } from '../../lib/app-meta';
 
 const { t, locale } = useI18n();
 
@@ -172,6 +173,7 @@ onMounted(async () => {
       <header class="page-title">
         <div>
           <h1>{{ t('appTitle') }}</h1>
+          <div class="version-line mono">v{{ APP_VERSION }}</div>
           <p class="subtitle">{{ t('routerHint') }}</p>
         </div>
         <NSelect
